@@ -14,10 +14,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY requirements.txt requirements-cpu.txt ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Use CPU-only PyTorch for smaller image size (saves ~2GB)
+# Install CPU PyTorch first, then other dependencies
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements-cpu.txt
 
 # Copy the entire project
 COPY . .
@@ -33,4 +36,6 @@ ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+# Use 1 worker to save memory (each worker loads model separately)
+# Increase timeout for model download on first request
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "300", "--threads", "2", "app:app"]

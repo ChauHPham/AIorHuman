@@ -1,0 +1,23 @@
+# CPU-only PyTorch requirements (for deployment on CPU servers like Render)
+# PyTorch CPU version is installed separately in buildCommand to avoid CUDA dependencies
+# This saves ~2GB+ compared to CUDA version
+
+numpy>=1.24.0
+pillow>=10.0.0
+scikit-learn>=1.3.0
+matplotlib>=3.8.0
+tqdm>=4.66.0
+opencv-python>=4.8.0
+
+# Web application dependencies
+flask>=2.3.0
+flask-cors>=4.0.0
+gunicorn>=21.2.0
+requests>=2.31.0
+
+# Dataset download (optional)
+kagglehub>=0.2.0
+
+# Model hosting and download
+huggingface_hub>=0.20.0
+
