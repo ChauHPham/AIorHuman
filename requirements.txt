@@ -16,3 +16,6 @@ requests>=2.31.0
 
 # Dataset download (optional)
 kagglehub>=0.2.0
+
+# Model hosting and download
+huggingface_hub>=0.20.0

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Art Detector</title>
+    <title>AI Art Detector Quiz</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             padding: 40px;
-            max-width: 600px;
+            max-width: 800px;
             width: 100%;
             text-align: center;
         }
@@ -40,73 +40,200 @@
 
         .subtitle {
             color: #666;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             font-size: 1.1em;
         }
 
-        .upload-area {
-            border: 3px dashed #ddd;
+        .score-board {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
             border-radius: 15px;
-            padding: 60px 20px;
             margin-bottom: 30px;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .quiz-image-container {
+            margin: 30px 0;
             position: relative;
         }
 
-        .upload-area:hover {
-            border-color: #667eea;
-            background-color: #f8f9ff;
+        .quiz-image {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: block;
+            margin: 0 auto;
         }
 
-        .upload-area.dragover {
-            border-color: #667eea;
-            background-color: #f0f2ff;
-            transform: scale(1.02);
+        .image-loading {
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+            border-radius: 15px;
         }
 
-        .upload-icon {
-            font-size: 3em;
-            color: #ddd;
-            margin-bottom: 20px;
-        }
-
-        .upload-text {
-            color: #666;
-            font-size: 1.2em;
-            margin-bottom: 10px;
-        }
-
-        .upload-hint {
-            color: #999;
-            font-size: 0.9em;
-        }
-
-        #fileInput {
-            display: none;
+        .answer-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
         }
 
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px 30px;
+            padding: 20px 50px;
             border-radius: 25px;
-            font-size: 1.1em;
+            font-size: 1.3em;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin: 10px;
+            flex: 1;
+            max-width: 250px;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        .btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(-1px);
         }
 
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #e17055 0%, #d63031 100%);
+        }
+
+        .btn-human {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-top: 20px;
+        }
+
+        .result-panel {
+            display: none;
+            margin-top: 30px;
+            padding: 30px;
+            background: #f8f9ff;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .result-panel.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .result-correct {
+            color: #00b894;
+        }
+
+        .result-incorrect {
+            color: #d63031;
+        }
+
+        .result-details {
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+
+        .result-detail-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .model-prediction {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .model-prediction-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .probabilities {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .prob-item {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .prob-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .prob-bar {
+            background: #e0e0e0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .prob-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s ease;
+        }
+
+        .prob-value {
+            font-size: 0.9em;
+            color: #666;
         }
 
         .loading {
@@ -129,93 +256,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        .result {
-            display: none;
-            margin-top: 30px;
-            padding: 30px;
-            background: #f8f9ff;
-            border-radius: 15px;
-            border-left: 5px solid #667eea;
-        }
-
-        .result.show {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .prediction {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-
-        .confidence {
-            font-size: 1.2em;
-            margin-bottom: 20px;
-        }
-
-        .probabilities {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .prob-item {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .prob-label {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .prob-bar {
-            background: #e0e0e0;
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .prob-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transition: width 0.5s ease;
-        }
-
-        .prob-value {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .preview-image {
-            max-width: 300px;
-            max-height: 300px;
-            border-radius: 10px;
-            margin: 20px auto;
-            display: block;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .preview-container {
-            margin: 20px 0;
-            display: none;
-        }
-
-        .preview-container.show {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
         .error {
             background: #ffe6e6;
             color: #d63031;
@@ -225,226 +265,379 @@
             border-left: 5px solid #d63031;
         }
 
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            display: none;
-            animation: slideIn 0.3s ease, fadeOut 0.3s ease 3.7s;
-            min-width: 250px;
+        .start-screen {
+            text-align: center;
         }
 
-        .notification.show {
+        .start-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            border-radius: 25px;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 30px;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .quiz-screen {
+            display: none;
+        }
+
+        .quiz-screen.active {
             display: block;
         }
 
-        .notification-content {
+        .question-selector {
+            margin: 30px 0;
+        }
+
+        .question-selector-label {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .question-options {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        .notification-icon {
-            font-size: 1.5em;
+        .question-option {
+            background: white;
+            border: 3px solid #ddd;
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        .question-option:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
         }
 
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
+        .question-option.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
         }
 
-        .ai-result { color: #e17055; }
-        .human-result { color: #00b894; }
-
-        .disclaimer {
-            margin-top: 40px;
+        .progress-indicator {
+            background: #f8f9ff;
             padding: 15px;
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            border-radius: 5px;
-            font-size: 0.85em;
-            color: #856404;
-            line-height: 1.5;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            color: #666;
+            font-weight: 500;
         }
 
-        .disclaimer strong {
-            color: #856404;
+        .completion-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .completion-screen.active {
+            display: block;
+        }
+
+        .completion-title {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .completion-stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .completion-stat {
+            margin: 15px 0;
+            font-size: 1.3em;
+        }
+
+        .completion-stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎨 AI Art Detector</h1>
-        <p class="subtitle">Upload an image to detect if it's AI-generated or Human-made</p>
-        
-        <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📁</div>
-            <div class="upload-text">Drop your image here or click to browse</div>
-            <div class="upload-hint">Supports JPG, PNG, GIF formats</div>
-            <input type="file" id="fileInput" accept="image/*">
-        </div>
-        
-        <div class="preview-container" id="previewContainer">
-            <img id="previewImage" class="preview-image">
-        </div>
-        
-        <button class="btn" id="analyzeBtn" disabled>Analyze Image</button>
-        <button class="btn" id="clearBtn" style="display: none;">Clear</button>
-        
-        <div class="notification" id="notification">
-            <div class="notification-content">
-                <span class="notification-icon">✓</span>
-                <span>Successfully uploaded!</span>
+        <!-- Start Screen -->
+        <div class="start-screen" id="startScreen">
+            <h1>🎨 AI Art Detector Quiz</h1>
+            <p class="subtitle">Test your ability to distinguish AI-generated art from human-made art!</p>
+            <p class="subtitle" style="margin-top: 20px; color: #999; font-size: 0.95em;">
+                You'll be shown images one at a time. Guess whether each image is AI-generated or Human-made, 
+                then see if you're correct and how the AI model predicts it.
+            </p>
+            <div class="question-selector">
+                <div class="question-selector-label">Select number of questions:</div>
+                <div class="question-options">
+                    <div class="question-option selected" data-questions="10">10 Questions</div>
+                    <div class="question-option" data-questions="20">20 Questions</div>
+                    <div class="question-option" data-questions="30">30 Questions</div>
+                </div>
             </div>
+            <button class="start-btn" id="startBtn">Start Quiz</button>
         </div>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Analyzing image...</p>
+
+        <!-- Quiz Screen -->
+        <div class="quiz-screen" id="quizScreen">
+            <h1>🎨 AI Art Detector Quiz</h1>
+            
+            <div class="progress-indicator" id="progressIndicator">
+                Question <span id="currentQuestion">0</span> of <span id="totalQuestions">0</span>
+            </div>
+            
+            <div class="score-board">
+                <div class="score-item">
+                    <div class="score-label">Score</div>
+                    <div class="score-value" id="score">0/0</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">Correct</div>
+                    <div class="score-value" id="correct">0</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">Accuracy</div>
+                    <div class="score-value" id="accuracy">0%</div>
+                </div>
+            </div>
+
+            <div class="quiz-image-container">
+                <div class="image-loading" id="imageLoading">
+                    <div class="spinner"></div>
+                </div>
+                <img id="quizImage" class="quiz-image" style="display: none;">
+            </div>
+
+            <div class="answer-buttons" id="answerButtons">
+                <button class="btn btn-ai" id="aiBtn" disabled>🤖 AI</button>
+                <button class="btn btn-human" id="humanBtn" disabled>👤 Human</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Checking answer...</p>
+            </div>
+
+            <div class="result-panel" id="resultPanel">
+                <div class="result-title" id="resultTitle"></div>
+                <div class="result-details" id="resultDetails"></div>
+                <div class="model-prediction" id="modelPrediction"></div>
+                <button class="btn btn-next" id="nextBtn">Next Question →</button>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
         </div>
-        
-        <div class="result" id="result">
-            <div id="prediction" class="prediction"></div>
-            <div id="confidence" class="confidence"></div>
-            <div class="probabilities" id="probabilities"></div>
-        </div>
-        
-        <div id="error" class="error" style="display: none;"></div>
-        
-        <div class="disclaimer">
-            <p><strong>Disclaimer:</strong> Predictions may not be accurate due to model limitations, potential overfitting, and limited training data. This tool is for educational purposes only and should not be used as the sole basis for determining whether content is AI-generated or human-made.</p>
+
+        <!-- Completion Screen -->
+        <div class="completion-screen" id="completionScreen">
+            <h1 class="completion-title">🎉 Quiz Complete!</h1>
+            <div class="completion-stats">
+                <div class="completion-stat">
+                    <div>Final Score</div>
+                    <div class="completion-stat-value" id="finalScore">0/0</div>
+                </div>
+                <div class="completion-stat">
+                    <div>Correct Answers</div>
+                    <div class="completion-stat-value" id="finalCorrect">0</div>
+                </div>
+                <div class="completion-stat">
+                    <div>Accuracy</div>
+                    <div class="completion-stat-value" id="finalAccuracy">0%</div>
+                </div>
+            </div>
+            <button class="start-btn" id="restartBtn">Play Again</button>
         </div>
     </div>
 
     <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const clearBtn = document.getElementById('clearBtn');
+        // State
+        let currentImageId = null;
+        let currentTrueLabel = null;
+        let score = { correct: 0, total: 0 };
+        let answerSelected = false;
+        let totalQuestions = 10;
+        let currentQuestion = 0;
+        let usedImageIds = new Set(); // Track used images to avoid repeats
+
+        // Elements
+        const startScreen = document.getElementById('startScreen');
+        const quizScreen = document.getElementById('quizScreen');
+        const completionScreen = document.getElementById('completionScreen');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const quizImage = document.getElementById('quizImage');
+        const imageLoading = document.getElementById('imageLoading');
+        const aiBtn = document.getElementById('aiBtn');
+        const humanBtn = document.getElementById('humanBtn');
         const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
+        const resultPanel = document.getElementById('resultPanel');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultDetails = document.getElementById('resultDetails');
+        const modelPrediction = document.getElementById('modelPrediction');
+        const nextBtn = document.getElementById('nextBtn');
         const error = document.getElementById('error');
-        const previewImage = document.getElementById('previewImage');
-        const previewContainer = document.getElementById('previewContainer');
-        const notification = document.getElementById('notification');
-        const prediction = document.getElementById('prediction');
-        const confidence = document.getElementById('confidence');
-        const probabilities = document.getElementById('probabilities');
+        const scoreEl = document.getElementById('score');
+        const correctEl = document.getElementById('correct');
+        const accuracyEl = document.getElementById('accuracy');
+        const progressIndicator = document.getElementById('progressIndicator');
+        const currentQuestionEl = document.getElementById('currentQuestion');
+        const totalQuestionsEl = document.getElementById('totalQuestions');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalCorrectEl = document.getElementById('finalCorrect');
+        const finalAccuracyEl = document.getElementById('finalAccuracy');
 
-        let selectedFile = null;
+        // Question selector
+        const questionOptions = document.querySelectorAll('.question-option');
+        questionOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                questionOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                totalQuestions = parseInt(option.dataset.questions);
+            });
+        });
 
-        // File upload handling
-        uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', handleDragOver);
-        uploadArea.addEventListener('dragleave', handleDragLeave);
-        uploadArea.addEventListener('drop', handleDrop);
-        fileInput.addEventListener('change', handleFileSelect);
+        // Start quiz
+        startBtn.addEventListener('click', () => {
+            // Reset state
+            score = { correct: 0, total: 0 };
+            currentQuestion = 0;
+            usedImageIds.clear();
+            updateProgress();
+            updateScore();
+            
+            startScreen.style.display = 'none';
+            completionScreen.classList.remove('active');
+            quizScreen.classList.add('active');
+            loadNextQuestion();
+        });
 
-        function handleDragOver(e) {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        }
+        // Restart quiz
+        restartBtn.addEventListener('click', () => {
+            completionScreen.classList.remove('active');
+            startScreen.style.display = 'block';
+        });
 
-        function handleDragLeave(e) {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-        }
+        // Answer buttons
+        aiBtn.addEventListener('click', () => checkAnswer('AI'));
+        humanBtn.addEventListener('click', () => checkAnswer('Human'));
+        nextBtn.addEventListener('click', loadNextQuestion);
 
-        function handleDrop(e) {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFile(files[0]);
-            }
-        }
-
-        function handleFileSelect(e) {
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
-        }
-
-        function handleFile(file) {
-            if (!file.type.startsWith('image/')) {
-                showError('Please select a valid image file.');
+        async function loadNextQuestion() {
+            // Check if quiz is complete (after answering all questions)
+            if (currentQuestion >= totalQuestions) {
+                showCompletionScreen();
                 return;
             }
 
-            selectedFile = file;
-            analyzeBtn.disabled = false;
-            clearBtn.style.display = 'inline-block';
-            
-            // Show preview immediately
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                previewImage.src = e.target.result;
-                previewContainer.classList.add('show');
-                // Show success notification
-                showNotification();
-            };
-            reader.readAsDataURL(file);
-            
+            // Reset state
+            answerSelected = false;
+            resultPanel.classList.remove('show');
+            aiBtn.disabled = false;
+            humanBtn.disabled = false;
+            quizImage.style.display = 'none';
+            imageLoading.style.display = 'flex';
             hideError();
-            hideResult();
-        }
-
-        function showNotification() {
-            notification.classList.add('show');
-            // Auto-hide after 4 seconds
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 4000);
-        }
-
-        // Analyze button
-        analyzeBtn.addEventListener('click', analyzeImage);
-        clearBtn.addEventListener('click', clearAll);
-
-        async function analyzeImage() {
-            if (!selectedFile) return;
-
-            showLoading();
-            hideError();
-            hideResult();
-
-            const formData = new FormData();
-            formData.append('image', selectedFile);
 
             try {
-                const response = await fetch('/predict', {
+                // Get random image (try up to 10 times to avoid repeats)
+                let attempts = 0;
+                let data;
+                do {
+                    const response = await fetch('/quiz/image');
+                    if (!response.ok) {
+                        throw new Error('Failed to load quiz image');
+                    }
+                    data = await response.json();
+                    attempts++;
+                } while (usedImageIds.has(data.image_id) && attempts < 10);
+                
+                currentImageId = data.image_id;
+                currentTrueLabel = data.true_label;
+                usedImageIds.add(currentImageId);
+
+                // Load image
+                updateProgress(); // Update progress when loading new question
+                quizImage.src = `/quiz/image/${currentImageId}?t=${Date.now()}`; // Add timestamp to prevent caching
+                quizImage.onload = () => {
+                    imageLoading.style.display = 'none';
+                    quizImage.style.display = 'block';
+                };
+            } catch (err) {
+                showError(err.message);
+                imageLoading.style.display = 'none';
+            }
+        }
+
+        async function checkAnswer(userAnswer) {
+            if (answerSelected || !currentImageId) return;
+            
+            answerSelected = true;
+            aiBtn.disabled = true;
+            humanBtn.disabled = true;
+            showLoading();
+            hideError();
+
+            try {
+                const response = await fetch('/quiz/check', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_id: currentImageId,
+                        answer: userAnswer
+                    })
                 });
 
-                const data = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(data.error || 'Analysis failed');
+                    throw new Error('Failed to check answer');
                 }
 
+                const data = await response.json();
+                
+                // Update score
+                score.total++;
+                currentQuestion++;
+                if (data.is_correct) {
+                    score.correct++;
+                }
+                updateScore();
+                updateProgress();
+
+                // Show result
                 showResult(data);
+
+                // Update button text if quiz is complete
+                if (currentQuestion >= totalQuestions) {
+                    nextBtn.textContent = 'View Results →';
+                } else {
+                    nextBtn.textContent = 'Next Question →';
+                }
             } catch (err) {
                 showError(err.message);
             } finally {
@@ -453,39 +646,79 @@
         }
 
         function showResult(data) {
-            const { predicted_class, confidence, probabilities: probs } = data;
+            // Result title
+            if (data.is_correct) {
+                resultTitle.textContent = '✓ Correct!';
+                resultTitle.className = 'result-title result-correct';
+            } else {
+                resultTitle.textContent = '✗ Incorrect';
+                resultTitle.className = 'result-title result-incorrect';
+            }
+
+            // Result details
+            resultDetails.innerHTML = `
+                <div class="result-detail-item">
+                    <strong>Your Answer:</strong> ${data.user_answer}
+                </div>
+                <div class="result-detail-item">
+                    <strong>Correct Answer:</strong> ${data.true_label}
+                </div>
+            `;
+
+            // Model prediction
+            modelPrediction.innerHTML = `
+                <div class="model-prediction-title">🤖 AI Model Prediction:</div>
+                <div class="result-detail-item">
+                    <strong>Prediction:</strong> ${data.model_prediction}
+                </div>
+                <div class="result-detail-item">
+                    <strong>Confidence:</strong> ${(data.model_confidence * 100).toFixed(1)}%
+                </div>
+                <div class="probabilities">
+                    ${Object.entries(data.model_probabilities).map(([label, prob]) => `
+                        <div class="prob-item">
+                            <div class="prob-label">${label}</div>
+                            <div class="prob-bar">
+                                <div class="prob-fill" style="width: ${prob * 100}%"></div>
+                            </div>
+                            <div class="prob-value">${(prob * 100).toFixed(1)}%</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            resultPanel.classList.add('show');
+        }
+
+        function updateScore() {
+            scoreEl.textContent = `${score.correct}/${score.total}`;
+            correctEl.textContent = score.correct;
+            const accuracy = score.total > 0 ? (score.correct / score.total * 100).toFixed(0) : 0;
+            accuracyEl.textContent = `${accuracy}%`;
+        }
+
+        function updateProgress() {
+            // Show current question number (1-indexed for display)
+            currentQuestionEl.textContent = currentQuestion + 1;
+            totalQuestionsEl.textContent = totalQuestions;
+        }
+
+        function showCompletionScreen() {
+            quizScreen.classList.remove('active');
+            completionScreen.classList.add('active');
             
-            prediction.textContent = `Predicted: ${predicted_class}`;
-            prediction.className = `prediction ${predicted_class.toLowerCase()}-result`;
-            
-            confidence.textContent = `Confidence: ${(confidence * 100).toFixed(1)}%`;
-            
-            // Create probability bars
-            probabilities.innerHTML = '';
-            Object.entries(probs).forEach(([label, prob]) => {
-                const item = document.createElement('div');
-                item.className = 'prob-item';
-                item.innerHTML = `
-                    <div class="prob-label">${label}</div>
-                    <div class="prob-bar">
-                        <div class="prob-fill" style="width: ${prob * 100}%"></div>
-                    </div>
-                    <div class="prob-value">${(prob * 100).toFixed(1)}%</div>
-                `;
-                probabilities.appendChild(item);
-            });
-            
-            result.classList.add('show');
+            finalScoreEl.textContent = `${score.correct}/${score.total}`;
+            finalCorrectEl.textContent = score.correct;
+            const accuracy = score.total > 0 ? (score.correct / score.total * 100).toFixed(0) : 0;
+            finalAccuracyEl.textContent = `${accuracy}%`;
         }
 
         function showLoading() {
             loading.style.display = 'block';
-            analyzeBtn.disabled = true;
         }
 
         function hideLoading() {
             loading.style.display = 'none';
-            analyzeBtn.disabled = false;
         }
 
         function showError(message) {
@@ -495,20 +728,6 @@
 
         function hideError() {
             error.style.display = 'none';
-        }
-
-        function hideResult() {
-            result.classList.remove('show');
-        }
-
-        function clearAll() {
-            selectedFile = null;
-            fileInput.value = '';
-            analyzeBtn.disabled = true;
-            clearBtn.style.display = 'none';
-            previewContainer.classList.remove('show');
-            hideResult();
-            hideError();
         }
     </script>
 </body>

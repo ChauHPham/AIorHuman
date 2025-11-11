@@ -1,16 +1,17 @@
-# AI Art Detector (PyTorch + Web App)
+# AI Art Detector Quiz (PyTorch + Web App)
 
-Detect whether an image is **AI-generated** or **Human-made** using a transfer-learning baseline.
+**Test your knowledge on AI images vs human!** Can you tell the difference between AI-generated art and human-made art? Take the quiz and see how well you can identify them!
 
 ## Features
-- PyTorch + torchvision baseline (ResNet-50)
+- **🎮 Interactive Quiz**: Test your knowledge with 10, 20, or 30 questions
+- **📊 Score Tracking**: See your accuracy and track your progress
+- **🤖 AI Model Comparison**: See how the AI model predicts each image
+- **🎨 Random Images**: Get a fresh set of randomized images each game
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
+- PyTorch + torchvision baseline (ResNet-50) for model predictions
 - Clean dataset loader with train/val splits
-- Confusion matrix and classification report
 - Ready-to-run CLI (`train.py`, `evaluate.py`)
-- Jupyter notebook quickstart
-- **🌐 Web Application** with Flask backend and modern HTML/JS frontend
 - **🐳 Docker deployment** ready
-- **📱 Responsive UI** with drag-and-drop image upload
 
 ## Folder Layout
 ```
@@ -67,7 +68,7 @@ ai_art_detector/
    python -m src.evaluate --data_dir data --checkpoint models/detector.pth --num_classes 2
    ```
 
-## 🌐 Web Application
+## 🌐 Web Application - Quiz Mode
 
 ### Quick Start
 1. **Install dependencies** (includes Flask and web dependencies)
@@ -82,16 +83,20 @@ ai_art_detector/
 
 3. **Open your browser** and go to `http://localhost:5000`
 
-### Web App Features
-- **Drag & Drop Interface**: Upload images by dragging them onto the upload area
-- **Real-time Predictions**: Get instant AI/Human classification
-- **Confidence Scores**: See probability distributions for all classes
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Image Preview**: See your uploaded image before analysis
+### Quiz Features
+- **Choose Your Challenge**: Select 10, 20, or 30 questions
+- **Random Images**: Each game shows you a fresh set of randomized images
+- **Instant Feedback**: See if you're correct immediately after answering
+- **AI Model Comparison**: See how the AI model predicts each image and compare with your answer
+- **Score Tracking**: Track your score, correct answers, and accuracy percentage
+- **Progress Indicator**: See which question you're on (e.g., "Question 5 of 20")
+- **Completion Screen**: View your final results when you finish the quiz
 
 ### API Endpoints
-- `GET /` - Main web interface
-- `POST /predict` - Upload image and get prediction
+- `GET /` - Main quiz interface
+- `GET /quiz/image` - Get a random quiz image
+- `GET /quiz/image/<id>` - Serve quiz image file
+- `POST /quiz/check` - Check user's answer and return results
 - `GET /health` - Health check endpoint
 
 ### Docker Deployment
@@ -148,10 +153,20 @@ Want to make this a live website? See the deployment guides:
 - **Railway** (Free $5 credit) - Very simple
 - **Heroku** (Free tier with limitations) - Classic choice
 
+## How to Play
+
+1. **Start the Quiz**: Click "Start Quiz" on the home screen
+2. **Choose Questions**: Select how many questions you want (10, 20, or 30)
+3. **View Image**: Each question shows you an image
+4. **Make Your Guess**: Click "🤖 AI" or "👤 Human"
+5. **See Results**: Find out if you're correct and see the AI model's prediction
+6. **Track Progress**: Watch your score update in real-time
+7. **Complete Quiz**: View your final results and accuracy!
+
 ## Notes
 - This is a baseline; for real-world robustness, consider:
   - multiple generators in the AI class
   - augmentations (jpeg, resize, blur) to avoid overfitting to trivial cues
 - GPU recommended but not required.
 - Web app works with or without a trained model (will use untrained weights if no checkpoint found)
-- **Disclaimer**: Predictions may not be accurate due to model limitations, potential overfitting, and limited training data. Use for educational purposes only.
+- **Disclaimer**: Predictions may not be accurate due to model limitations, potential overfitting, and limited training data. This quiz is for educational and entertainment purposes only.

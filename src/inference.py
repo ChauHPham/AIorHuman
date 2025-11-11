@@ -7,22 +7,35 @@ from PIL import Image
 import torchvision.transforms as transforms
 import io
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ArtDetector:
-    def __init__(self, checkpoint_path='models/detector.pth', device=None):
+    def __init__(self, checkpoint_path='models/detector.pth', device=None, hf_repo_id=None, hf_filename=None):
         """
         Initialize the AI Art Detector
         
         Args:
-            checkpoint_path (str): Path to the trained model checkpoint
+            checkpoint_path (str): Path to the trained model checkpoint (local path)
             device (str): Device to run inference on ('cuda' or 'cpu')
+            hf_repo_id (str): Hugging Face repository ID (optional, uses env var if not provided)
+            hf_filename (str): Filename in Hugging Face repo (optional, defaults to 'detector.pth')
         """
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.class_names = ['AI', 'Human']
         self.model = None
         self.transform = None
         
-        self._load_model(checkpoint_path)
+        # Get model path (downloads from HF if needed)
+        from .model_loader import get_model_path
+        model_path = get_model_path(
+            local_path=checkpoint_path,
+            hf_repo_id=hf_repo_id,
+            hf_filename=hf_filename
+        )
+        
+        self._load_model(model_path)
         self._setup_transforms()
     
     def _load_model(self, checkpoint_path):
@@ -32,11 +45,15 @@ class ArtDetector:
         self.model = get_model(num_classes=2, pretrained=False).to(self.device)
         
         if os.path.exists(checkpoint_path):
-            self.model.load_state_dict(torch.load(checkpoint_path, map_location=self.device))
-            self.model.eval()
-            print(f"Model loaded from {checkpoint_path}")
+            try:
+                self.model.load_state_dict(torch.load(checkpoint_path, map_location=self.device))
+                self.model.eval()
+                logger.info(f"Model loaded from {checkpoint_path}")
+            except Exception as e:
+                logger.error(f"Error loading model from {checkpoint_path}: {e}")
+                logger.warning("Using untrained model.")
         else:
-            print(f"Warning: Checkpoint {checkpoint_path} not found. Using untrained model.")
+            logger.warning(f"Checkpoint {checkpoint_path} not found. Using untrained model.")
     
     def _setup_transforms(self):
         """Setup image preprocessing transforms"""

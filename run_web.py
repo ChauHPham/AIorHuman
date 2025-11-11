@@ -38,6 +38,11 @@ def main():
         print(f"✗ Failed to load detector: {e}")
         sys.exit(1)
     
+    # Load quiz dataset
+    from app import load_quiz_dataset
+    print("Loading quiz dataset...")
+    load_quiz_dataset()
+    
     # Start the application
     print(f"Starting web server on {args.host}:{args.port}")
     print("Open your browser and go to: http://localhost:5000")
