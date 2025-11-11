@@ -1,11 +1,15 @@
 import os
 import random
+import logging
 from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
+
+logger = logging.getLogger(__name__)
 
 # Import the inference module
 from src.inference import ArtDetector
 from src.datasets import ArtDataset
+from src.quiz_dataset_loader import QuizDatasetLoader
 
 app = Flask(__name__)
 CORS(app)
@@ -13,6 +17,7 @@ CORS(app)
 # Global detector instance
 detector = None
 quiz_dataset = None
+quiz_loader = None
 
 @app.route('/')
 def index():
@@ -52,38 +57,53 @@ def health():
 
 @app.route('/quiz/image', methods=['GET'])
 def get_quiz_image():
-    """Get a random image from the validation set for quiz"""
+    """Get a random image from the quiz dataset"""
     try:
-        if quiz_dataset is None or len(quiz_dataset) == 0:
-            return jsonify({'error': 'Quiz dataset not available'}), 500
+        # Use quiz_loader if available (preferred for production)
+        if quiz_loader and len(quiz_loader) > 0:
+            idx, (image_path, true_label_idx) = quiz_loader.get_random_sample()
+            true_label = quiz_loader.class_names[true_label_idx]
+            return jsonify({
+                'image_id': idx,
+                'image_path': image_path,
+                'true_label': true_label
+            })
         
-        # Get random image
-        idx = random.randint(0, len(quiz_dataset) - 1)
-        image_path, true_label_idx = quiz_dataset.samples[idx]
+        # Fallback to full dataset (for local development)
+        if quiz_dataset is not None and len(quiz_dataset) > 0:
+            idx = random.randint(0, len(quiz_dataset) - 1)
+            image_path, true_label_idx = quiz_dataset.samples[idx]
+            true_label = quiz_dataset.class_names[true_label_idx]
+            return jsonify({
+                'image_id': idx,
+                'image_path': image_path,
+                'true_label': true_label
+            })
         
-        # Get true label name
-        true_label = quiz_dataset.class_names[true_label_idx]
-        
-        # Return image path relative to data directory and true label
-        # We'll serve the image from a static endpoint
-        return jsonify({
-            'image_id': idx,
-            'image_path': image_path,
-            'true_label': true_label
-        })
+        return jsonify({'error': 'Quiz dataset not available. Please ensure quiz_samples/ directory exists with AI/ and Human/ subdirectories.'}), 500
     except Exception as e:
+        logger.error(f"Error getting quiz image: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/quiz/image/<int:image_id>', methods=['GET'])
 def serve_quiz_image(image_id):
     """Serve the quiz image file"""
     try:
-        if quiz_dataset is None or image_id >= len(quiz_dataset):
-            return jsonify({'error': 'Invalid image ID'}), 404
+        # Try quiz_loader first
+        if quiz_loader and image_id < len(quiz_loader):
+            sample = quiz_loader.get_sample(image_id)
+            if sample:
+                image_path, _ = sample
+                return send_file(image_path)
         
-        image_path, _ = quiz_dataset.samples[image_id]
-        return send_file(image_path)
+        # Fallback to full dataset
+        if quiz_dataset is not None and image_id < len(quiz_dataset):
+            image_path, _ = quiz_dataset.samples[image_id]
+            return send_file(image_path)
+        
+        return jsonify({'error': 'Invalid image ID'}), 404
     except Exception as e:
+        logger.error(f"Error serving quiz image: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/quiz/check', methods=['POST'])
@@ -97,12 +117,20 @@ def check_quiz_answer():
         if image_id is None or user_answer is None:
             return jsonify({'error': 'Missing image_id or answer'}), 400
         
-        if quiz_dataset is None or image_id >= len(quiz_dataset):
-            return jsonify({'error': 'Invalid image ID'}), 404
+        # Get image and label from quiz_loader or quiz_dataset
+        image_path = None
+        true_label = None
         
-        # Get true label
-        image_path, true_label_idx = quiz_dataset.samples[image_id]
-        true_label = quiz_dataset.class_names[true_label_idx]
+        if quiz_loader and image_id < len(quiz_loader):
+            sample = quiz_loader.get_sample(image_id)
+            if sample:
+                image_path, true_label_idx = sample
+                true_label = quiz_loader.class_names[true_label_idx]
+        elif quiz_dataset is not None and image_id < len(quiz_dataset):
+            image_path, true_label_idx = quiz_dataset.samples[image_id]
+            true_label = quiz_dataset.class_names[true_label_idx]
+        else:
+            return jsonify({'error': 'Invalid image ID'}), 404
         
         # Get model prediction
         result = detector.predict_from_file(image_path)
@@ -136,16 +164,42 @@ def load_detector(checkpoint_path='models/detector.pth'):
     return detector
 
 def load_quiz_dataset(data_dir='data'):
-    """Load the quiz dataset from validation set"""
-    global quiz_dataset
+    """Load the quiz dataset from Hugging Face Hub or local directories"""
+    global quiz_dataset, quiz_loader
+    
+    # Get Hugging Face repo from environment variable
+    hf_repo_id = os.environ.get('HF_QUIZ_IMAGES_REPO', None)
+    
+    # Try to load from Hugging Face Hub or local directories
     try:
-        quiz_dataset = ArtDataset(root_dir=data_dir, split='val', transform=None)
-        print(f"✓ Quiz dataset loaded: {len(quiz_dataset)} images")
-        return quiz_dataset
+        quiz_loader = QuizDatasetLoader(
+            sample_data_dir='quiz_samples',
+            full_data_dir=data_dir,
+            hf_repo_id=hf_repo_id
+        )
+        if len(quiz_loader) > 0:
+            source = "Hugging Face Hub" if hf_repo_id and quiz_loader.hf_repo_id else "local directory"
+            print(f"✓ Quiz dataset loaded: {len(quiz_loader)} images from {source}")
+            return quiz_loader
     except Exception as e:
         print(f"Warning: Could not load quiz dataset: {e}")
+        quiz_loader = None
+    
+    # Fallback to full dataset (for local development)
+    try:
+        quiz_dataset = ArtDataset(root_dir=data_dir, split='val', transform=None)
+        if len(quiz_dataset) > 0:
+            print(f"✓ Quiz dataset loaded: {len(quiz_dataset)} images from full dataset")
+            return quiz_dataset
+    except Exception as e:
+        print(f"Warning: Could not load full quiz dataset: {e}")
         quiz_dataset = None
-        return None
+    
+    print("⚠️  No quiz dataset available. Quiz will not work.")
+    print("   Options to fix:")
+    print("   1. Upload images to Hugging Face Hub and set HF_QUIZ_IMAGES_REPO environment variable")
+    print("   2. Create quiz_samples/ directory with AI/ and Human/ subdirectories")
+    return None
 
 if __name__ == '__main__':
     # Load detector on startup
