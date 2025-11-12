@@ -24,26 +24,6 @@ detector = None
 quiz_dataset = None
 quiz_loader = None
 
-# Initialize on import (for gunicorn)
-def init_app():
-    """Initialize the app - called on startup"""
-    global detector, quiz_loader, quiz_dataset
-    
-    # Load detector
-    try:
-        load_detector()
-    except Exception as e:
-        logger.error(f"Failed to load detector: {e}")
-    
-    # Load quiz dataset
-    try:
-        load_quiz_dataset()
-    except Exception as e:
-        logger.error(f"Failed to load quiz dataset: {e}")
-
-# Initialize when module is imported (works with gunicorn)
-init_app()
-
 @app.route('/')
 def index():
     """Serve the main page"""
@@ -285,11 +265,32 @@ def load_quiz_dataset(data_dir='data'):
     print("   2. Create quiz_samples/ directory with AI/ and Human/ subdirectories")
     return None
 
-if __name__ == '__main__':
-    # Load detector on startup
-    load_detector()
+# Initialize on import (for gunicorn) - must be after function definitions
+def init_app():
+    """Initialize the app - called on startup"""
+    global detector, quiz_loader, quiz_dataset
+    
+    # Load detector
+    try:
+        load_detector()
+    except Exception as e:
+        logger.error(f"Failed to load detector: {e}")
+    
     # Load quiz dataset
-    load_quiz_dataset()
+    try:
+        load_quiz_dataset()
+    except Exception as e:
+        logger.error(f"Failed to load quiz dataset: {e}")
+
+# Initialize when module is imported (works with gunicorn)
+init_app()
+
+if __name__ == '__main__':
+    # Load detector on startup (already done by init_app, but keep for direct execution)
+    if detector is None:
+        load_detector()
+    if quiz_loader is None and quiz_dataset is None:
+        load_quiz_dataset()
     # Get port from environment variable (for deployment) or use default
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
