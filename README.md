@@ -1,6 +1,8 @@
 # AI Art Detector Quiz (PyTorch + Web App)
 
 **Test your knowledge on AI images vs human!** Can you tell the difference between AI-generated art and human-made art? Take the quiz and see how well you can identify them!
+<img width="1048" height="1940" alt="image" src="https://github.com/user-attachments/assets/9704349c-067b-4774-b045-d3569468cfdf" />
+<img width="1050" height="1908" alt="image" src="https://github.com/user-attachments/assets/28de0c54-93d5-41fd-8803-3e01929af793" />
 
 ## Features
 - **🎮 Interactive Quiz**: Test your knowledge with 10, 20, or 30 questions
