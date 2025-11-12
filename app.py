@@ -61,13 +61,23 @@ def get_quiz_image():
     try:
         # Use quiz_loader if available (preferred for production)
         if quiz_loader and len(quiz_loader) > 0:
-            idx, (image_path, true_label_idx) = quiz_loader.get_random_sample()
-            true_label = quiz_loader.class_names[true_label_idx]
-            return jsonify({
-                'image_id': idx,
-                'image_path': image_path,
-                'true_label': true_label
-            })
+            result = quiz_loader.get_random_sample()
+            if result:
+                idx, sample_data = result
+                if sample_data:
+                    image_path, true_label_idx = sample_data
+                    true_label = quiz_loader.class_names[true_label_idx]
+                    return jsonify({
+                        'image_id': idx,
+                        'image_path': image_path,
+                        'true_label': true_label
+                    })
+                else:
+                    logger.error(f"Failed to get sample data for index {idx}")
+                    return jsonify({'error': 'Failed to load image data'}), 500
+            else:
+                logger.error("get_random_sample returned None")
+                return jsonify({'error': 'No samples available'}), 500
         
         # Fallback to full dataset (for local development)
         if quiz_dataset is not None and len(quiz_dataset) > 0:
@@ -80,9 +90,19 @@ def get_quiz_image():
                 'true_label': true_label
             })
         
-        return jsonify({'error': 'Quiz dataset not available. Please ensure quiz_samples/ directory exists with AI/ and Human/ subdirectories.'}), 500
+        error_msg = 'Quiz dataset not available. '
+        if not quiz_loader:
+            error_msg += 'Quiz loader not initialized. '
+        elif len(quiz_loader) == 0:
+            error_msg += 'Quiz loader has 0 images. '
+        error_msg += 'Please check HF_QUIZ_IMAGES_REPO environment variable or create quiz_samples/ directory.'
+        
+        logger.error(error_msg)
+        return jsonify({'error': error_msg}), 500
     except Exception as e:
         logger.error(f"Error getting quiz image: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/quiz/image/<int:image_id>', methods=['GET'])
@@ -94,16 +114,26 @@ def serve_quiz_image(image_id):
             sample = quiz_loader.get_sample(image_id)
             if sample:
                 image_path, _ = sample
-                return send_file(image_path)
+                if image_path and os.path.exists(image_path):
+                    return send_file(image_path)
+                else:
+                    logger.error(f"Image path does not exist: {image_path}")
+                    return jsonify({'error': f'Image file not found: {image_path}'}), 404
         
         # Fallback to full dataset
         if quiz_dataset is not None and image_id < len(quiz_dataset):
             image_path, _ = quiz_dataset.samples[image_id]
-            return send_file(image_path)
+            if os.path.exists(image_path):
+                return send_file(image_path)
+            else:
+                logger.error(f"Image path does not exist: {image_path}")
+                return jsonify({'error': f'Image file not found: {image_path}'}), 404
         
-        return jsonify({'error': 'Invalid image ID'}), 404
+        return jsonify({'error': f'Invalid image ID: {image_id}'}), 404
     except Exception as e:
-        logger.error(f"Error serving quiz image: {e}")
+        logger.error(f"Error serving quiz image {image_id}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/quiz/check', methods=['POST'])

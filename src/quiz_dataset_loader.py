@@ -61,7 +61,7 @@ class QuizDatasetLoader:
         self.samples = []
     
     def _load_from_hf(self):
-        """Load images from Hugging Face Hub"""
+        """Load image metadata from Hugging Face Hub (lazy download)"""
         try:
             # Download manifest first
             manifest_path = hf_hub_download(
@@ -77,34 +77,33 @@ class QuizDatasetLoader:
             
             logger.info(f"Found manifest with {manifest.get('total', 0)} images")
             
-            # Download images and create samples
+            # Store metadata instead of downloading all images upfront
+            # Images will be downloaded on-demand when needed
             samples = []
-            cache_base = os.path.join(os.path.expanduser('~'), '.cache', 'huggingface', 'hub', 'datasets')
-            
             for img_info in manifest.get('images', []):
                 hf_path = img_info['path']
                 label = img_info['label']
+                class_idx = self.class_names.index(label)
                 
-                try:
-                    # Download image
-                    img_path = hf_hub_download(
-                        repo_id=self.hf_repo_id,
-                        filename=hf_path,
-                        repo_type='dataset',
-                        token=HF_TOKEN
-                    )
-                    
-                    class_idx = self.class_names.index(label)
-                    samples.append((img_path, class_idx))
-                except Exception as e:
-                    logger.warning(f"Could not download {hf_path}: {e}")
-                    continue
+                # Store metadata: (hf_path, repo_id, label_idx)
+                # We'll download the actual file when needed
+                samples.append({
+                    'hf_path': hf_path,
+                    'repo_id': self.hf_repo_id,
+                    'label_idx': class_idx,
+                    'label': label
+                })
             
             if samples:
+                # Store manifest for later use
+                self.manifest = manifest
                 return samples
         except Exception as e:
             logger.warning(f"Could not load from Hugging Face Hub: {e}")
             logger.warning(f"  Repo: {self.hf_repo_id}")
+            logger.warning(f"  Error details: {str(e)}")
+            import traceback
+            logger.warning(traceback.format_exc())
             logger.warning(f"  Falling back to local directories...")
         
         return None
@@ -138,13 +137,35 @@ class QuizDatasetLoader:
         if not self.samples:
             return None, None
         idx = random.randint(0, len(self.samples) - 1)
-        return idx, self.samples[idx]
+        return idx, self._get_sample_data(idx)
     
     def get_sample(self, idx):
         """Get sample by index"""
         if idx < 0 or idx >= len(self.samples):
             return None
-        return self.samples[idx]
+        return self._get_sample_data(idx)
+    
+    def _get_sample_data(self, idx):
+        """Get sample data, downloading from HF if needed"""
+        sample = self.samples[idx]
+        
+        # If it's a dict (HF metadata), download the image
+        if isinstance(sample, dict):
+            try:
+                img_path = hf_hub_download(
+                    repo_id=sample['repo_id'],
+                    filename=sample['hf_path'],
+                    repo_type='dataset',
+                    token=HF_TOKEN
+                )
+                # Return as tuple: (path, label_idx) for compatibility
+                return (img_path, sample['label_idx'])
+            except Exception as e:
+                logger.error(f"Failed to download image {sample['hf_path']}: {e}")
+                return None
+        
+        # If it's already a tuple (local file), return as-is
+        return sample
     
     def __len__(self):
         return len(self.samples)
