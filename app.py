@@ -4,6 +4,11 @@ import logging
 from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Import the inference module
@@ -18,6 +23,26 @@ CORS(app)
 detector = None
 quiz_dataset = None
 quiz_loader = None
+
+# Initialize on import (for gunicorn)
+def init_app():
+    """Initialize the app - called on startup"""
+    global detector, quiz_loader, quiz_dataset
+    
+    # Load detector
+    try:
+        load_detector()
+    except Exception as e:
+        logger.error(f"Failed to load detector: {e}")
+    
+    # Load quiz dataset
+    try:
+        load_quiz_dataset()
+    except Exception as e:
+        logger.error(f"Failed to load quiz dataset: {e}")
+
+# Initialize when module is imported (works with gunicorn)
+init_app()
 
 @app.route('/')
 def index():
@@ -49,10 +74,18 @@ def predict():
 @app.route('/health')
 def health():
     """Health check endpoint"""
+    hf_repo = os.environ.get('HF_QUIZ_IMAGES_REPO', 'Not set')
+    quiz_status = 'loaded' if (quiz_loader and len(quiz_loader) > 0) or (quiz_dataset and len(quiz_dataset) > 0) else 'not loaded'
+    
     return jsonify({
         'status': 'healthy',
         'model_loaded': detector is not None,
-        'device': str(detector.device) if detector else 'unknown'
+        'device': str(detector.device) if detector else 'unknown',
+        'quiz_loader_status': quiz_status,
+        'quiz_loader_count': len(quiz_loader) if quiz_loader else 0,
+        'quiz_dataset_count': len(quiz_dataset) if quiz_dataset else 0,
+        'hf_quiz_repo': hf_repo,
+        'quiz_loader_initialized': quiz_loader is not None
     })
 
 @app.route('/quiz/image', methods=['GET'])
@@ -200,32 +233,53 @@ def load_quiz_dataset(data_dir='data'):
     # Get Hugging Face repo from environment variable
     hf_repo_id = os.environ.get('HF_QUIZ_IMAGES_REPO', None)
     
+    logger.info(f"Loading quiz dataset...")
+    logger.info(f"  HF_QUIZ_IMAGES_REPO: {hf_repo_id if hf_repo_id else 'Not set'}")
+    logger.info(f"  Checking quiz_samples/: {os.path.exists('quiz_samples')}")
+    logger.info(f"  Checking data/val/: {os.path.exists(os.path.join(data_dir, 'val'))}")
+    
     # Try to load from Hugging Face Hub or local directories
     try:
+        logger.info("Attempting to create QuizDatasetLoader...")
         quiz_loader = QuizDatasetLoader(
             sample_data_dir='quiz_samples',
             full_data_dir=data_dir,
             hf_repo_id=hf_repo_id
         )
+        logger.info(f"QuizDatasetLoader created, samples count: {len(quiz_loader)}")
+        
         if len(quiz_loader) > 0:
             source = "Hugging Face Hub" if hf_repo_id and quiz_loader.hf_repo_id else "local directory"
-            print(f"✓ Quiz dataset loaded: {len(quiz_loader)} images from {source}")
+            msg = f"✓ Quiz dataset loaded: {len(quiz_loader)} images from {source}"
+            print(msg)
+            logger.info(msg)
             return quiz_loader
+        else:
+            logger.warning("QuizDatasetLoader created but has 0 samples")
     except Exception as e:
-        print(f"Warning: Could not load quiz dataset: {e}")
+        error_msg = f"Warning: Could not load quiz dataset: {e}"
+        print(error_msg)
+        logger.error(error_msg, exc_info=True)
         quiz_loader = None
     
     # Fallback to full dataset (for local development)
     try:
+        logger.info("Attempting to load from full dataset...")
         quiz_dataset = ArtDataset(root_dir=data_dir, split='val', transform=None)
         if len(quiz_dataset) > 0:
-            print(f"✓ Quiz dataset loaded: {len(quiz_dataset)} images from full dataset")
+            msg = f"✓ Quiz dataset loaded: {len(quiz_dataset)} images from full dataset"
+            print(msg)
+            logger.info(msg)
             return quiz_dataset
     except Exception as e:
-        print(f"Warning: Could not load full quiz dataset: {e}")
+        error_msg = f"Warning: Could not load full quiz dataset: {e}"
+        print(error_msg)
+        logger.warning(error_msg)
         quiz_dataset = None
     
-    print("⚠️  No quiz dataset available. Quiz will not work.")
+    warning_msg = "⚠️  No quiz dataset available. Quiz will not work."
+    print(warning_msg)
+    logger.warning(warning_msg)
     print("   Options to fix:")
     print("   1. Upload images to Hugging Face Hub and set HF_QUIZ_IMAGES_REPO environment variable")
     print("   2. Create quiz_samples/ directory with AI/ and Human/ subdirectories")
